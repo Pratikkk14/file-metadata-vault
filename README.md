@@ -34,5 +34,26 @@ This project supports **Python versions 3.8 through 3.12**.
 ```bash
 git clone https://github.com/Pratikkk14/file-metadata-vault.git
 cd file-metadata-vault
+```
 
-☁️ Enable Required GCP APIs
+# Enable Required GCP APIs
+---
+```bash
+gcloud services enable run.googleapis.com \
+    pubsub.googleapis.com \
+    storage.googleapis.com \
+    eventarc.googleapis.com \
+    logging.googleapis.com
+```
+This can be done by both ways either through **CLI** or through **GCP CONSOLE** 
+
+
+# 🛠️ Set Required Environment Variables
+You can export them in your terminal session or configure them in Cloud Run.
+```bash
+export PROJECT_ID="your-project-id"
+export REGION="asia-south1"
+export BUCKET_NAME="file-metadata-vault"
+export TOPIC_NAME="file-metadata"
+export SERVICE_NAME="file-metadata-vault"
+```
