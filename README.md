@@ -1,8 +1,9 @@
 # file-metadata-vault
 File Structure
 project-root/
-├──frontend ← to send file from frontend 
 ├── backend/ ← Flask/FastAPI app
+│ │      ├──templates
+│ │            ├──index.html ← to send file from frontend  ← to send file from frontend 
 │ ├── main.py ← routes + upload logic
 │ └── requirements.txt
 ├── functions/ ← Cloud Function code

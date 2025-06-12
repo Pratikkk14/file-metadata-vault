@@ -1,45 +1,75 @@
 import os
 import json
+import google.auth
+from datetime import datetime
 from google.cloud import pubsub_v1
 import functions_framework
 
-# Get environment variables
-PROJECT_ID = os.environ.get("PROJECT_ID")
-TOPIC_NAME = os.environ.get("TOPIC_NAME")
+# Get default project ID
+_, default_project_id = google.auth.default()
+PROJECT_ID = os.environ.get("PROJECT_ID", default_project_id)
+TOPIC_NAME = os.environ.get("TOPIC_NAME", "file-metadata")
 
-# Initialize Pub/Sub publisher
+# Initialize Pub/Sub client
 publisher = pubsub_v1.PublisherClient()
 topic_path = publisher.topic_path(PROJECT_ID, TOPIC_NAME)
 
 @functions_framework.cloud_event
 def handle_gcs_event(cloudevent):
     """
-    Triggered by a Cloud Storage event via Eventarc.
-    Publishes file metadata (name, size, format) to a Pub/Sub topic.
+    Triggered by a GCS object finalization event (via Eventarc).
+    Extracts object metadata and publishes it to Pub/Sub.
     """
+    trigger_time = datetime.utcnow().isoformat() + "Z"
+
+    print(json.dumps({
+        "severity": "INFO",
+        "message": "Function triggered by GCS event",
+        "trigger_time": trigger_time,
+        "event_type": cloudevent["type"]
+    }))
 
     data = cloudevent.data
 
-    # Extract metadata
     file_name = data.get("name")
     file_size = data.get("size")
     file_type = data.get("contentType")
+    bucket = data.get("bucket")
 
-    # Log for verification
-    print(f"File uploaded: {file_name}")
-    print(f"Size: {file_size} bytes")
-    print(f"Type: {file_type}")
-
-    # Compose metadata message
-    metadata = {
+    print(json.dumps({
+        "severity": "INFO",
+        "message": "File metadata extracted",
+        "bucket": bucket,
         "file_name": file_name,
         "file_size": file_size,
-        "file_format": file_type
+        "file_type": file_type
+    }))
+
+    metadata = {
+        "bucket": bucket,
+        "file_name": file_name,
+        "file_size": file_size,
+        "file_format": file_type,
+        "trigger_time": trigger_time
     }
 
-    # Publish to Pub/Sub
-    data = publisher.publish(
-        topic_path,
-        json.dumps(metadata).encode("utf-8")
-    )
-    print(f"✅ Published message ID: {data.result()}")
+    try:
+        future = publisher.publish(
+            topic_path,
+            json.dumps(metadata).encode("utf-8")
+        )
+        message_id = future.result()
+
+        print(json.dumps({
+            "severity": "INFO",
+            "message": "Published to Pub/Sub",
+            "topic": topic_path,
+            "message_id": message_id
+        }))
+
+    except Exception as e:
+        print(json.dumps({
+            "severity": "ERROR",
+            "message": "Failed to publish to Pub/Sub",
+            "error": str(e)
+        }))
